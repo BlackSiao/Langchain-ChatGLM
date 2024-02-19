@@ -1,5 +1,17 @@
+# model_path = "D:\Hugface"
+#
+# from langchain_community.llms import ChatGLM
+#
+# endpoint_url ="http://127.0.0.1:8000"
+#
+# llm = ChatGLM(
+#     endpoint_url =endpoint_url,
+#     max_token =80000,
+#     top_p=0.9
+# )
+
 from transformers import AutoTokenizer, AutoModel
-# 已修改模型位置为下载后的位置，确认模型完整无误
+
 tokenizer = AutoTokenizer.from_pretrained("D:\Hugface", trust_remote_code=True)
 model = AutoModel.from_pretrained("D:\Hugface", trust_remote_code=True).half().cuda()
 model = model.eval()
