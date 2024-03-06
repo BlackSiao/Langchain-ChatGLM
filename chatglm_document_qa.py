@@ -1,36 +1,31 @@
 import time
-
 import os
 import gradio as gr
-from langchain_community.document_loaders import DirectoryLoader #此处有修改
-from langchain_community.llms import ChatGLM #此处有修改
+from langchain.document_loaders import DirectoryLoader
+from langchain.llms import ChatGLM
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma #此处进行修改
+from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
+
+
+def load_documents(directory="book"):
+    loader = DirectoryLoader(directory, show_progress=True)
+    documents = loader.load()
+    text_spliter = CharacterTextSplitter(chunk_size=256, chunk_overlap=0)
+    docs_spliter = text_spliter.split_documents(documents)
+    return docs_spliter
+
 
 # # 加载embedding
 # embedding_model_dict = {
-#    "ernie-tiny": "nghuyong/ernie-3.0-nano-zh",
-#    "ernie-base": "nghuyong/ernie-3.0-base-zh",
-#    "text2vec": "GanymedeNil/text2vec-large-chinese",
-#    "text2vec2": "uer/sbert-base-chinese-nli",
-#    "text2vec3": "shibing624/text2vec-base-chinese",
+#     "ernie-tiny": "nghuyong/ernie-3.0-nano-zh",
+#     "ernie-base": "nghuyong/ernie-3.0-base-zh",
+#     "text2vec": "GanymedeNil/text2vec-large-chinese",
+#     "text2vec2": "uer/sbert-base-chinese-nli",
+#     "text2vec3": "shibing624/text2vec-base-chinese",
 # }
-
-def load_documents(directory="book"):  #此处修改documents->book
-    """
-    加载books下的文件，进行拆分
-    :param directory:
-    :return:
-    """
-    loader = DirectoryLoader(directory)
-    documents = loader.load()
-    text_spliter = CharacterTextSplitter(chunk_size=256, chunk_overlap=0)
-    split_docs = text_spliter.split_documents(documents)
-    return split_docs
-
 
 def load_embedding_model(model_name="ernie-tiny"):
     """
@@ -39,12 +34,11 @@ def load_embedding_model(model_name="ernie-tiny"):
     :return:
     """
     encode_kwargs = {"normalize_embeddings": False}
-    model_kwargs = {"device": "cuda:0"} # 用GPU
-    local_model_path = "D:\Hugface"  # 修改模型为本地地址
+    model_kwargs = {"device": "cuda:0"}
     return HuggingFaceEmbeddings(
-        model_name=r"C:\Users\BlackSiao\Desktop\毕业设计\text2vec",
+        model_name=r"C:\Users\BlackSiao\Desktop\毕业设计\text2vec",  #手动下载模型到本地'text2vec文件夹'
         model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs,
+        encode_kwargs=encode_kwargs
     )
 
 
@@ -61,14 +55,13 @@ def store_chroma(docs, embeddings, persist_directory="VectorStore"):
     return db
 
 
-# 加载embedding模型
-embeddings = load_embedding_model('text2vec3')
-# 加载数据库
+# 这段代码不是很明白
+embedding = load_embedding_model('text2vec3')
 if not os.path.exists('VectorStore'):
     documents = load_documents()
-    db = store_chroma(documents, embeddings)
+    db = store_chroma(documents, embedding)
 else:
-    db = Chroma(persist_directory='VectorStore', embedding_function=embeddings)
+    db = Chroma(persist_directory='VectorStore', embedding_function=embedding)
 
 # 创建llm
 llm = ChatGLM(
@@ -93,39 +86,38 @@ qa = RetrievalQA.from_chain_type(
 )
 
 
+# def chat(question, history):
+#     response = qa.run(question)
+#     return response
+#
+#
+# # 调用gradio生成本地的web交互端
+# demo = gr.ChatInterface(chat)
+# demo.launch(inbrowser=True)
+
+def print_like_dislike(x: gr.LikeData):
+    print(x.index, x.value, x.liked)
+
+
 def add_text(history, text):
     history = history + [(text, None)]
-    return history, gr.update(value="", interactive=False)
+    return history, gr.Textbox(value="", interactive=False)
 
 
 def add_file(history, file):
-    """
-    上传文件后的回调函数，将上传的文件向量化存入数据库
-    :param history:
-    :param file:
-    :return:
-    """
-    global qa
-    directory = os.path.dirname(file.name)
+    directory = os.path.dirname(file.name)  # 拿到临时文件夹
     documents = load_documents(directory)
-    db = store_chroma(documents, embeddings)
-    retriever = db.as_retriever()
-    qa.retriever = retriever
+    store_chroma(documents, embedding)   #将临时上传的加载好，并存到数据库里面
     history = history + [((file.name,), None)]
     return history
 
 
 def bot(history):
-    """
-    聊天调用的函数
-    :param history:
-    :return:
-    """
     message = history[-1][0]
     if isinstance(message, tuple):
         response = "文件上传成功！！"
     else:
-        response = qa({"query": message})['result']
+        response = qa({"query": message})['result']  # 这里也进行了修改
     history[-1][1] = ""
     for character in response:
         history[-1][1] += character
@@ -148,16 +140,20 @@ with gr.Blocks() as demo:
             placeholder="Enter text and press enter, or upload an image",
             container=False,
         )
-        btn = gr.UploadButton("📁", file_types=['txt'])
+        btn = gr.UploadButton("📁", file_types=['txt'])   # 限制上传文档类型为txt
 
     txt_msg = txt.submit(add_text, [chatbot, txt], [chatbot, txt], queue=False).then(
-        bot, chatbot, chatbot
+        bot, chatbot, chatbot, api_name="bot_response"
     )
-    txt_msg.then(lambda: gr.update(interactive=True), None, [txt], queue=False)
+    txt_msg.then(lambda: gr.Textbox(interactive=True), None, [txt], queue=False)
     file_msg = btn.upload(add_file, [chatbot, btn], [chatbot], queue=False).then(
         bot, chatbot, chatbot
     )
 
+    chatbot.like(print_like_dislike, None, None)
+
+
 demo.queue()
 if __name__ == "__main__":
     demo.launch()
+

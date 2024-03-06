@@ -8,7 +8,7 @@ from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 
-
+# 对文档进行切片，向量化，存储
 def load_documents(directory="book"):
     loader = DirectoryLoader(directory, show_progress=True)
     documents = loader.load()
