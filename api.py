@@ -17,7 +17,8 @@ def torch_gc():
 
 app = FastAPI()
 
-
+# 一个POST请求处理函数，函数接受JSON格式的请求，并从请求中提取 prompt, history, max_length， top_p, temperature等参数，
+# 然后使用预训练的模型和tokenizer生成对话，并返回答案。
 @app.post("/")
 async def create_item(request: Request):
     global model, tokenizer
@@ -48,9 +49,12 @@ async def create_item(request: Request):
     torch_gc()
     return answer
 
-#由于网络较差，使用下载模型到本地进行链接的方法，修改pretrained_moedl——path为 D:\Hugface
+# 由于网络较差，使用下载模型到本地进行链接的方法，修改pretrained_moedl——path为 D:\Hugface
 if __name__ == '__main__':
+    # 从此路径加载预训练的tokenizer
     tokenizer = AutoTokenizer.from_pretrained("D:\Hugface", trust_remote_code=True)
+    # 从此路径加载预训练的模型， .cuda()方法将此模型转移到GPU上运行
     model = AutoModel.from_pretrained("D:\Hugface",trust_remote_code=True).half().cuda()
     model.eval()
+    # 运行名为app的应用程序，监听本机的8000端口， 使用一个工作进程
     uvicorn.run(app, host='0.0.0.0', port=8000, workers=1)
