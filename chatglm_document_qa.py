@@ -146,18 +146,18 @@ def bot(history):
 # slider们的监视器函数
 def maxtoken_change(x):
     llm.max_token = x
-    return
+    return 0
 
 
 
 def top_change(x):
     llm.top_p = x
-    return
+    return 0
 
 
 def temperature_change(x):
     llm.temperature = x
-    return
+    return 0
 
 
 with gr.Blocks() as demo:
@@ -188,10 +188,10 @@ with gr.Blocks() as demo:
         Top_slider = gr.Slider(0, 1, 0.9, label="Top_p", info="Top P for nucleus sampling from 0 to 1", interactive=True)
         temperature_slider = gr.Slider(0, 10, 0.5, label="Temperature", info="Max token allowed to pass to the model.", interactive=True)
 
-    # 滑块的监视器
-    token_slider.release(maxtoken_change)
-    Top_slider.release(top_change)
-    temperature_slider.release(temperature_change)
+    # 滑块的监视器, 随时监控，并调用监视器函数调节模型参数
+    token_slider.release(maxtoken_change(token_slider.value))
+    Top_slider.release(top_change(Top_slider.value))
+    temperature_slider.release(temperature_change(temperature_slider.value))
 
     txt_msg = txt.submit(add_text, [chatbot, txt], [chatbot, txt], queue=False).then(
         bot, chatbot, chatbot, api_name="bot_response"
