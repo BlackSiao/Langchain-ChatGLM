@@ -142,16 +142,21 @@ def bot(history):
         yield history
 
 
-# slider们的监视器
+
+# slider们的监视器函数
 def maxtoken_change(x):
-    # 传入滑块当前的值，并最终影响llm的参数
-
-
-def maxtoken_change():
+    llm.max_token = x
     return
 
 
-def temperature_change():
+
+def top_change(x):
+    llm.top_p = x
+    return
+
+
+def temperature_change(x):
+    llm.temperature = x
     return
 
 
@@ -179,14 +184,14 @@ with gr.Blocks() as demo:
     with gr.Column(scale=1):
         emptyBtn = gr.Button("Clear History")
         # 定义三个滑块
-        token_slider = gr.Slider(0, 60000, 60000, 5000, label="Max_token", info="Top P for nucleus sampling from 0 to 1")
-        Top_slider = gr.Slider(0, 1, 0.9, label="Top_p", info="Top P for nucleus sampling from 0 to 1")
-        temperature_slider = gr.Slider(0, 10, 0.5, label="Temperature", info="Max token allowed to pass to the model.")
+        token_slider = gr.Slider(0, 60000, 60000, 5000, label="Max_token", info="Top P for nucleus sampling from 0 to 1", interactive=True)
+        Top_slider = gr.Slider(0, 1, 0.9, label="Top_p", info="Top P for nucleus sampling from 0 to 1", interactive=True)
+        temperature_slider = gr.Slider(0, 10, 0.5, label="Temperature", info="Max token allowed to pass to the model.", interactive=True)
 
     # 滑块的监视器
-    token_slider.release()
-    Top_slider.release()
-    temperature_slider.release()
+    token_slider.release(maxtoken_change)
+    Top_slider.release(top_change)
+    temperature_slider.release(temperature_change)
 
     txt_msg = txt.submit(add_text, [chatbot, txt], [chatbot, txt], queue=False).then(
         bot, chatbot, chatbot, api_name="bot_response"
