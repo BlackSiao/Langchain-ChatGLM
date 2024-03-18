@@ -146,18 +146,18 @@ def bot(history):
 # slider们的监视器函数
 def maxtoken_change(x):
     llm.max_token = x
-    return 0
+    return None
 
 
 
 def top_change(x):
     llm.top_p = x
-    return 0
+    return None
 
 
 def temperature_change(x):
     llm.temperature = x
-    return 0
+    return None
 
 
 with gr.Blocks() as demo:
